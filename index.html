@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aplicación para grabar señas en formato de frames y exportar en ZIP">
+    <meta name="author" content="Danielle Guillen">
+    <title>Grabador de Señas - Script Frames</title>
+    
+    <!-- Preload de recursos críticos -->
+    <link rel="preload" href="styles.css" as="style">
+    <link rel="preload" href="script.js" as="script">
+    
+    <!-- Hojas de estilo -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Librerías externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
+            integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    
+    <!-- FileSaver.js sin hash para evitar problemas de integridad -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    
+    <!-- Script de respaldo para FileSaver -->
+    <script>
+        // Esperar un momento para verificar si FileSaver se cargó
+        setTimeout(function() {
+            if (typeof saveAs === 'undefined') {
+                console.warn('FileSaver no disponible, cargando desde CDN alternativo...');
+                
+                // Intentar cargar desde unpkg
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js';
+                script.crossOrigin = 'anonymous';
+                
+                script.onerror = function() {
+                    console.warn('CDN alternativo falló, usando implementación básica...');
+                    // Implementación básica de saveAs
+                    window.saveAs = function(blob, filename) {
+                        try {
+                            const a = document.createElement('a');
+                            const url = URL.createObjectURL(blob);
+                            a.href = url;
+                            a.download = filename;
+                            a.style.display = 'none';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            setTimeout(() => URL.revokeObjectURL(url), 100);
+                            console.log('Archivo descargado usando implementación básica');
+                        } catch (error) {
+                            console.error('Error en descarga básica:', error);
+                            alert('Error al descargar el archivo. Tu navegador puede no soportar esta funcionalidad.');
+                        }
+                    };
+                };
+                
+                script.onload = function() {
+                    console.log('FileSaver cargado desde CDN alternativo');
+                };
+                
+                document.head.appendChild(script);
+            }
+        }, 100);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- Vista inicial -->
+        <div id="initialView" class="initial-view">
+            <h1>🎥 Grabador de Señas</h1>
+            <div class="info-box">
+                Esta aplicación te permite grabar múltiples repeticiones de una seña y exportarlas en un archivo ZIP organizado.
+                Cada grabación captura exactamente <strong>50 frames</strong> durante 5 segundos (10 FPS).
+            </div>
+            <div class="input-group">
+                <label for="signName">Nombre de la seña:</label>
+                <input type="text" 
+                       id="signName" 
+                       class="input-field"
+                       placeholder="Ej: hola, gracias, por_favor..." 
+                       maxlength="50"
+                       autocomplete="off"
+                       spellcheck="false">
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" 
+                        onclick="ScriptFrames.startRecording()"
+                        aria-label="Comenzar grabación">
+                    🚀 Comenzar
+                </button>
+            </div>
+        </div>
+
+        <!-- Vista de grabación -->
+        <div id="recordingView" class="recording-view">
+            <h1 id="signTitle">Grabando: <span id="currentSignName" class="stat-number"></span></h1>
+            
+            <div class="video-container">
+                <video id="video" 
+                       class="video-feed" 
+                       autoplay 
+                       muted 
+                       playsinline
+                       aria-label="Vista previa de la cámara"></video>
+                <canvas id="canvas" class="canvas-hidden" aria-hidden="true"></canvas>
+            </div>
+            
+            <div class="recording-stats">
+                Grabaciones realizadas: <span id="recordingCounter" class="stat-number">0</span>
+            </div>
+            
+            <div id="status" class="status status-idle" role="status" aria-live="polite">
+                Listo para grabar
+            </div>
+            
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button id="recordBtn" 
+                        class="btn btn-danger" 
+                        onclick="ScriptFrames.recordFrames()"
+                        aria-label="Iniciar grabación de 5 segundos">
+                    📹 Iniciar grabación (5s)
+                </button>
+                <button id="downloadBtn" 
+                        class="btn btn-secondary" 
+                        onclick="ScriptFrames.downloadZip()" 
+                        disabled
+                        aria-label="Finalizar y descargar archivo ZIP">
+                    📦 Finalizar y descargar ZIP
+                </button>
+            </div>
+            
+            <div class="button-group mt-4">
+                <button class="btn btn-neutral" 
+                        onclick="ScriptFrames.goBack()"
+                        aria-label="Volver al inicio">
+                    ← Volver al inicio
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script principal -->
+    <script src="script.js"></script>
+</body>
+</html>
