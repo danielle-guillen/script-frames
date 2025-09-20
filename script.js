@@ -656,16 +656,22 @@ const RecordingController = {
     async captureFrames(session) {
         const frameInterval = Utils.getFrameInterval();
         let frameCount = 0;
-
+        
         return new Promise((resolve, reject) => {
             const captureFrame = () => {
                 try {
                     const elapsed = Date.now() - session.startTime;
                     
-                    // Verificar condiciones de parada
-                    if (frameCount >= CONFIG.recording.targetFrames || elapsed >= CONFIG.recording.duration) {
+                    // Verificar si hemos alcanzado exactamente 50 frames
+                    if (frameCount >= CONFIG.recording.targetFrames) {
+                        Utils.log(`Grabación completada: ${frameCount} frames capturados`);
                         resolve();
                         return;
+                    }
+                    
+                    // Si superamos el tiempo límite pero no tenemos 50 frames, continúa hasta completar
+                    if (elapsed >= CONFIG.recording.duration && frameCount < CONFIG.recording.targetFrames) {
+                        Utils.log(`Tiempo límite alcanzado, pero solo ${frameCount} frames. Completando hasta ${CONFIG.recording.targetFrames}...`);
                     }
 
                     // Capturar frame
@@ -678,12 +684,13 @@ const RecordingController = {
                         frameNumber: frameCount
                     });
 
-                    // Actualizar progreso
+                    // Actualizar progreso basado en frames capturados
                     const progress = (frameCount / CONFIG.recording.targetFrames) * 100;
                     UIController.updateProgress(progress);
 
-                    // Programar siguiente frame
-                    setTimeout(captureFrame, frameInterval);
+                    // Programar siguiente frame con intervalo ajustado
+                    const nextInterval = frameCount < CONFIG.recording.targetFrames ? frameInterval : 50;
+                    setTimeout(captureFrame, nextInterval);
                     
                 } catch (error) {
                     reject(error);
